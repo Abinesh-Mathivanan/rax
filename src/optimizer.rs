@@ -1,3 +1,4 @@
+use rand::Rng;
 
 pub trait Optimizer {
     fn step(&mut self, params: &mut Vec<f64>, grads: &[f64]);
@@ -177,5 +178,63 @@ impl Optimizer for Momentum {
 
     fn reset(&mut self) {
         self.velocity.clear();
+    }
+}
+
+pub struct SimpleRandomSearch {
+    step_size: f64,
+    rng: rand::rngs::ThreadRng,
+}
+
+pub struct GridSearch {
+    step_size: f64,
+    current_dim: usize,
+    direction: i32,
+}
+
+impl SimpleRandomSearch {
+    pub fn new(step_size: f64) -> Self {
+        SimpleRandomSearch {
+            step_size,
+            rng: rand::thread_rng(),
+        }
+    }
+}
+
+impl GridSearch {
+    pub fn new(step_size: f64) -> Self {
+        GridSearch {
+            step_size,
+            current_dim: 0,
+            direction: 1,
+        }
+    }
+}
+
+impl Optimizer for SimpleRandomSearch {
+    fn step(&mut self, params: &mut Vec<f64>, _grads: &[f64]) {
+        for param in params.iter_mut() {
+            let perturbation = self.rng.gen_range(-self.step_size..self.step_size);
+            *param += perturbation;
+        }
+    }
+
+    fn reset(&mut self) {
+        self.rng = rand::thread_rng();
+    }
+}
+
+impl Optimizer for GridSearch {
+    fn step(&mut self, params: &mut Vec<f64>, _grads: &[f64]) {
+        params[self.current_dim] += self.step_size * self.direction as f64;
+        self.current_dim = (self.current_dim + 1) % params.len();
+        if self.current_dim == 0 {
+            self.direction *= -1;
+        }
+    }
+
+    fn reset(&mut self) {
+        self.current_dim = 0;
+        self.direction = 1;
     }
 }
